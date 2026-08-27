@@ -1,47 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project Sdk="Dalamud.NET.Sdk/15.0.0">
+<Project Sdk="Dalamud.NET.Sdk/13.0.0">
   <!-- Project settings -->
+  <!-- 台服移植：SDK 15 是從 csproj 屬性產生 manifest，SDK 13 的 DalamudPackager 讀的是專案目錄下的
+       <AssemblyName>.json。名稱／簡介／說明一律以 ScrollableTabs.json 為準，不要在這裡重複一份。 -->
   <PropertyGroup>
-    <Name>Scrollable Tabs</Name>
-    <Version>1.0.0</Version>
-    <Author>Haselnussbomber</Author>
-    <RepoUrl>https://github.com/Haselnussbomber/ScrollableTabs</RepoUrl>
-    <Punchline>Lets you use the mouse wheel to switch tabs (like LB/RB on controllers do).</Punchline>
-    <Description>Lets you use the mouse wheel to switch tabs (like LB/RB on controllers do).
-
-The following windows are supported and can be toggled individually:
-
-- Aether Currents
-- Armoury Chest
-- Blue Magic Spellbook
-- Character
-- Character -> Classes/Jobs
-- Character -> Reputation
-- Chocobo Saddlebag
-- Companion
-- Currency
-- Facewear
-- Fashion Accessories
-- Field Records
-- Fish Guide
-- Glamour Dresser (scrolls pages, not tabs)
-- Gold Saucer -> Card List
-- Gold Saucer -> Decks -> Edit Deck
-- Gold Saucer -> Lord of Verminion -> Minion Hotbar
-- Inventory
-- Island Minion Guide
-- Minions
-- Mounts
-- Retainer Inventory
-- Shared FATE
-- Sightseeing Log
-
-The Command Panel already includes this functionality and instead has an option to disable its tab-scrolling sound effect.</Description>
-  </PropertyGroup>
-
-  <!-- Build settings -->
-  <PropertyGroup>
-    <OutputPath>..\bin\</OutputPath>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <Version>1.0.0.0</Version>
+    <Authors>Haselnussbomber</Authors>
+    <RepositoryUrl>https://github.com/ffxiv-tc-port/ScrollableTabs</RepositoryUrl>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <!-- Assets -->

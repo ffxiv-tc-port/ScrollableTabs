@@ -1,34 +1,37 @@
 using System;
-using System.Threading;
-using System.Threading.Tasks;
 using Dalamud.Interface.Windowing;
+using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
+using FFXIVClientStructs.FFXIV.Client.System.Input;
 using FFXIVClientStructs.FFXIV.Client.UI;
 
 namespace ScrollableTabs;
 
-public unsafe class Plugin(IDalamudPluginInterface pluginInterface) : IAsyncDalamudPlugin
+public unsafe class Plugin : IDalamudPlugin
 {
+    // 🔴 屬性注入發生在建構子之前（Dalamud/IoC/Internal/ServiceContainer.cs CreateAsync：
+    //    先 InjectProperties 再 ctor.Invoke），所以建構子裡直接讀這些欄位是安全的。
+    [PluginService] internal static IDalamudPluginInterface DalamudPluginInterface { get; private set; } = null!;
+    [PluginService] internal static IPluginLog DalamudPluginLog { get; private set; } = null!;
+    [PluginService] internal static IFramework DalamudFramework { get; private set; } = null!;
+    [PluginService] internal static IGameConfig DalamudGameConfig { get; private set; } = null!;
+
     private PluginWindowSystem? _windowSystem;
     private ConfigWindow? _configWindow;
-    private QuickPanelPlaySoundEffectPatch? _patch;
 
-    public Task LoadAsync(CancellationToken cancellationToken)
+    public Plugin()
     {
-        Services.Initialize(pluginInterface);
+        Services.Initialize(DalamudPluginInterface, DalamudPluginLog, DalamudFramework, DalamudGameConfig);
 
         _windowSystem = new PluginWindowSystem();
         _configWindow = new ConfigWindow();
         _windowSystem.AddWindow(_configWindow);
-        _patch = new();
 
         Services.Framework.Update += OnFrameworkUpdate;
-
-        return Task.CompletedTask;
     }
 
-    public ValueTask DisposeAsync()
+    public void Dispose()
     {
         Services.Framework.Update -= OnFrameworkUpdate;
 
@@ -40,12 +43,7 @@ public unsafe class Plugin(IDalamudPluginInterface pluginInterface) : IAsyncDala
         }
 
         _windowSystem?.Dispose();
-        _windowSystem = null!;
-
-        _patch?.Dispose();
-        _patch = null;
-
-        return ValueTask.CompletedTask;
+        _windowSystem = null;
     }
 
     private void OnFrameworkUpdate(IFramework framework)
@@ -59,7 +57,14 @@ public unsafe class Plugin(IDalamudPluginInterface pluginInterface) : IAsyncDala
             return;
 
         var inputData = UIInputData.Instance();
-        if (inputData == null || inputData->CurrentMouseDragButtons != 0)
+        if (inputData == null)
+            return;
+
+        // 台服移植：上游讀 UIInputData.CurrentMouseDragButtons（[FieldOffset(0x9AC)]），
+        // 我方 API13 釘住的 FFXIVClientStructs 沒有這個欄位。刻意「不」把上游 HEAD 的偏移抄過來
+        // ——那份追的是比 7.20 更新的全球版客戶端，偏移錯了是靜默讀到鄰居欄位。
+        // 改用同一顆結構裡已經存在、且語意等價的旗標：游標有任何鍵按住＝正在拖曳，不處理滾輪。
+        if (inputData->CursorInputs.MouseButtonHeldFlags != MouseButtonFlags.None)
             return;
 
         var wheelState = inputData->CursorInputs.MouseWheel;

@@ -59,7 +59,7 @@ public class ConfigWindow : Window, IDisposable
                 ImGui.TableSetupColumn("Text", ImGuiTableColumnFlags.WidthStretch);
 
                 DrawBool("Invert", ref config.Invert);
-                DrawBool("SuppressQuickPanelSounds", ref config.SuppressQuickPanelSounds);
+                DrawBool("AllowUnverifiedMJIFavoritesSwitch", ref config.AllowUnverifiedMJIFavoritesSwitch);
 
                 DrawBool("HandleAetherCurrent", ref config.HandleAetherCurrent);
                 DrawBool("HandleArmouryBoard", ref config.HandleArmouryBoard);
@@ -70,7 +70,6 @@ public class ConfigWindow : Window, IDisposable
                 DrawBool("HandleInventoryBuddy", ref config.HandleInventoryBuddy);
                 DrawBool("HandleBuddy", ref config.HandleBuddy);
                 DrawBool("HandleCurrency", ref config.HandleCurrency);
-                DrawBool("HandleGlassSelect", ref config.HandleGlassSelect);
                 DrawBool("HandleOrnamentNoteBook", ref config.HandleOrnamentNoteBook);
                 DrawBool("HandleFieldRecord", ref config.HandleFieldRecord);
                 DrawBool("HandleFishGuide", ref config.HandleFishGuide);
@@ -94,7 +93,11 @@ public class ConfigWindow : Window, IDisposable
 
         var cursorPos = ImGui.GetCursorPos();
 
-        DrawLink("GitHub", t("ConfigWindow.GitHubLink.Tooltip"), "https://github.com/Haselnussbomber/ScrollableTabs");
+        DrawLink("GitHub", t("ConfigWindow.GitHubLink.Tooltip"), "https://github.com/ffxiv-tc-port/ScrollableTabs");
+        ImGui.SameLine();
+        ImGui.Text("•");
+        ImGui.SameLine();
+        DrawLink("Upstream", t("ConfigWindow.UpstreamLink.Tooltip"), "https://github.com/Haselnussbomber/ScrollableTabs");
         ImGui.SameLine();
         ImGui.Text("•");
         ImGui.SameLine();

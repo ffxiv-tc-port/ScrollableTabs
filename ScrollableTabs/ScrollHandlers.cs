@@ -17,9 +17,17 @@ public static unsafe class ScrollHandlers
     public const int NumInventoryRetainerLargeTabs = 3;
     public const int NumBuddyTabs = 3;
 
-    public static void Handle(Pointer<AtkUnitBase> unitBase, int wheelState)
+    // 台服移植：我方 API13 釘住的 FFXIVClientStructs 的 AtkEventType 有 33/34/35/36/38，
+    // 獨缺 37（上游 HEAD 命名為 ListItemHighlight）。這是引擎級的事件編號常數，不是結構偏移，
+    // 同一個引擎版本跨區穩定 ⇒ 直接用數值，比抄整份新版列舉安全。
+    private const AtkEventType ListItemHighlight = (AtkEventType)37;
+
+    // 台服移植：我方 API13 釘住的 FFXIVClientStructs 的 Interop.Pointer<T> 沒有 Cast<U>()
+    // 這個泛型方法（上游 HEAD 才有）。這裡不自己補一個擴充方法，直接把參數改成裸指標
+    // 並用 C 式轉型——語意完全相同，而且少一層看不見的包裝。
+    public static void Handle(AtkUnitBase* unitBase, int wheelState)
     {
-        switch (unitBase.Value->NameString)
+        switch (unitBase->NameString)
         {
             case "Buddy":
             case "BuddyAction":
@@ -95,60 +103,65 @@ public static unsafe class ScrollHandlers
 
             case "MinionNoteBook":
             case "MountNoteBook":
-                UpdateMountMinion(unitBase.Cast<AddonMinionMountBase>(), wheelState);
+                UpdateMountMinion(((AddonMinionMountBase*)unitBase), wheelState);
                 break;
 
             case "CharacterClass":
-                UpdateCharacterClass(unitBase.Cast<AddonCharacterClass>(), wheelState);
+                UpdateCharacterClass(((AddonCharacterClass*)unitBase), wheelState);
                 break;
             case "CharacterRepute":
-                UpdateCharacterRepute(unitBase.Cast<AddonCharacterRepute>(), wheelState);
+                UpdateCharacterRepute(((AddonCharacterRepute*)unitBase), wheelState);
                 break;
             case "AOZNotebook":
-                UpdateAOZNotebook(unitBase.Cast<AddonAOZNotebook>(), wheelState);
+                UpdateAOZNotebook(((AddonAOZNotebook*)unitBase), wheelState);
                 break;
             case "AetherCurrent":
-                UpdateAetherCurrent(unitBase.Cast<AddonAetherCurrent>(), wheelState);
+                UpdateAetherCurrent(((AddonAetherCurrent*)unitBase), wheelState);
                 break;
             case "ArmouryBoard":
-                UpdateArmouryBoard(unitBase.Cast<AddonArmouryBoard>(), wheelState);
+                UpdateArmouryBoard(((AddonArmouryBoard*)unitBase), wheelState);
                 break;
             case "Currency":
-                UpdateCurrency(unitBase.Cast<AddonCurrency>(), wheelState);
+                UpdateCurrency(((AddonCurrency*)unitBase), wheelState);
                 break;
             case "FateProgress":
-                UpdateFateProgress(unitBase.Cast<AddonFateProgress>(), wheelState);
+                UpdateFateProgress(((AddonFateProgress*)unitBase), wheelState);
                 break;
-            case "GlassSelect":
-                UpdateGlassSelect(unitBase.Cast<AddonGlassSelect>(), wheelState);
-                break;
+            // 台服移植：上游有 "GlassSelect"（臉部配件）的處理器，但我方 API13 釘住的
+            // FFXIVClientStructs 沒有 AddonGlassSelect 這個結構。刻意「不」從上游 HEAD 抄偏移
+            // ——那份追的是比 7.20 更新的全球版，而這個處理器會寫 IsSelected，
+            // 偏移錯的話是靜默寫壞鄰居欄位。整個處理器連同設定項一併移除。
             case "MJIMinionNoteBook":
-                UpdateMJIMinionNoteBook(unitBase.Cast<AddonMJIMinionNoteBook>(), wheelState);
+                UpdateMJIMinionNoteBook(((AddonMJIMinionNoteBook*)unitBase), wheelState);
                 break;
             case "MYCWarResultNotebook":
-                UpdateFieldNotes(unitBase.Cast<AddonMYCWarResultNotebook>(), wheelState);
+                UpdateFieldNotes(((AddonMYCWarResultNotebook*)unitBase), wheelState);
                 break;
             case "MiragePrismPrismBox":
-                UpdateMiragePrismPrismBox(unitBase.Cast<AddonMiragePrismPrismBox>(), wheelState);
+                UpdateMiragePrismPrismBox(((AddonMiragePrismPrismBox*)unitBase), wheelState);
                 break;
 
             case "AdventureNoteBook":
-                UpdateTabController(unitBase, &unitBase.Cast<AddonAdventureNoteBook>()->TabController, Services.Config.HandleAdventureNoteBook, wheelState);
+                UpdateTabController(unitBase, &((AddonAdventureNoteBook*)unitBase)->TabController, Services.Config.HandleAdventureNoteBook, wheelState);
                 break;
+            // 台服移植：上游這裡多一個 `&& !AgentFishGuide.Instance()->IsSearchTab` 的條件，
+            // 但我方 API13 的 AgentFishGuide 沒有 IsSearchTab 欄位（上游 HEAD 才有，[FieldOffset(0x30)]）。
+            // 拿掉這個 guard 而不是抄偏移：抄錯偏移是靜默讀錯記憶體，
+            // 拿掉只是「在魚類圖鑑的搜尋分頁上也會捲」這個良性差異。
             case "FishGuide2":
-                UpdateTabController(unitBase, &unitBase.Cast<AddonFishGuide2>()->TabController, Services.Config.HandleFishGuide && !AgentFishGuide.Instance()->IsSearchTab, wheelState);
+                UpdateTabController(unitBase, &((AddonFishGuide2*)unitBase)->TabController, Services.Config.HandleFishGuide, wheelState);
                 break;
             case "GSInfoCardList":
-                UpdateTabController(unitBase, &unitBase.Cast<AddonGSInfoCardList>()->TabController, Services.Config.HandleGoldSaucerCardList, wheelState);
+                UpdateTabController(unitBase, &((AddonGSInfoCardList*)unitBase)->TabController, Services.Config.HandleGoldSaucerCardList, wheelState);
                 break;
             case "GSInfoEditDeck":
-                UpdateTabController(unitBase, &unitBase.Cast<AddonGSInfoEditDeck>()->TabController, Services.Config.HandleGoldSaucerCardDeckEdit, wheelState);
+                UpdateTabController(unitBase, &((AddonGSInfoEditDeck*)unitBase)->TabController, Services.Config.HandleGoldSaucerCardDeckEdit, wheelState);
                 break;
             case "LovmPaletteEdit":
-                UpdateTabController(unitBase, &unitBase.Cast<AddonLovmPaletteEdit>()->TabController, Services.Config.HandleLovmPaletteEdit, wheelState);
+                UpdateTabController(unitBase, &((AddonLovmPaletteEdit*)unitBase)->TabController, Services.Config.HandleLovmPaletteEdit, wheelState);
                 break;
             case "OrnamentNoteBook":
-                UpdateTabController(unitBase, &unitBase.Cast<AddonOrnamentNoteBook>()->TabController, Services.Config.HandleOrnamentNoteBook, wheelState);
+                UpdateTabController(unitBase, &((AddonOrnamentNoteBook*)unitBase)->TabController, Services.Config.HandleOrnamentNoteBook, wheelState);
                 break;
         }
     }
@@ -174,27 +187,18 @@ public static unsafe class ScrollHandlers
         if (!TryGetAddon<AddonInventory>("Inventory"u8, out var addon))
             return;
 
-        if (addon->TabIndex == NumInventoryTabs - 1 && wheelState > 0)
-        {
-            // Client::UI::AddonInventory.SwitchToKeyItems call in HandleBackButtonInput
-            Span<AtkValue> values = stackalloc AtkValue[3];
-            values.Clear();
+        // 台服移植：上游在最後一個分頁再往下捲時，會用 FireCallback 送出寫死的命令碼 22
+        // 跳到「關鍵物品」視窗。這條路徑在我方環境有兩個各自獨立的問題：
+        //   ① 命令碼 22 沒有對台服驗證過，猜錯的失敗形式是「送出別的指令」而不是報錯；
+        //   ② 它要讀 AddonInventory.OpenerAddonId，而我方釘住的 FFXIVClientStructs 沒有這個欄位
+        //      ——從上游 HEAD（更新版客戶端）抄偏移就是靜默讀到鄰居欄位，再把讀到的垃圾送進回呼。
+        // ⇒ 整條「物品欄↔關鍵物品」互切移除。失效形式良性：捲到底就停住，不會跳窗。
+        var tabIndex = GetTabIndex(addon->TabIndex, NumInventoryTabs, wheelState);
 
-            values[0].SetInt(22);
-            values[1].SetInt(addon->OpenerAddonId);
-            values[2].SetUInt(0);
+        if (addon->TabIndex == tabIndex)
+            return;
 
-            addon->FireCallback(3, values.GetPointer(0));
-        }
-        else
-        {
-            var tabIndex = GetTabIndex(addon->TabIndex, NumInventoryTabs, wheelState);
-
-            if (addon->TabIndex == tabIndex)
-                return;
-
-            addon->SetTab(tabIndex);
-        }
+        addon->SetTab(tabIndex);
     }
 
     public static void UpdateInventoryEvent(int wheelState)
@@ -205,34 +209,25 @@ public static unsafe class ScrollHandlers
         if (!TryGetAddon<AddonInventoryEvent>("InventoryEvent"u8, out var addon))
             return;
 
-        if (addon->TabIndex == 0 && wheelState < 0)
+        // 台服移植：與 UpdateInventory 同理，上游的「關鍵物品→物品欄」互切
+        // 同樣依賴未驗證的命令碼 22 ＋ 我方沒有的 AddonInventoryEvent.OpenerAddonId 欄位，整條移除。
+        var numEnabledButtons = 0;
+        foreach (ref var button in addon->Buttons)
         {
-            // Client::UI::AddonInventoryEvent.SwitchToInventory call in HandleBackButtonInput
-            Span<AtkValue> values = stackalloc AtkValue[3];
-            values.Clear();
+            // 台服加固：按鈕陣列的元素可能是 null（分頁尚未建好），上游直接解參考。
+            if (button.Value == null)
+                continue;
 
-            values[0].SetInt(22);
-            values[1].SetInt(addon->OpenerAddonId);
-            values[2].SetUInt(2);
-
-            addon->FireCallback(3, values.GetPointer(0));
+            if ((button.Value->AtkComponentButton.Flags & 0x40000) != 0)
+                numEnabledButtons++;
         }
-        else
-        {
-            var numEnabledButtons = 0;
-            foreach (ref var button in addon->Buttons)
-            {
-                if ((button.Value->AtkComponentButton.Flags & 0x40000) != 0)
-                    numEnabledButtons++;
-            }
 
-            var tabIndex = GetTabIndex(addon->TabIndex, numEnabledButtons, wheelState);
+        var tabIndex = GetTabIndex(addon->TabIndex, numEnabledButtons, wheelState);
 
-            if (addon->TabIndex == tabIndex)
-                return;
+        if (addon->TabIndex == tabIndex)
+            return;
 
-            addon->SetTab(tabIndex);
-        }
+        addon->SetTab(tabIndex);
     }
 
     public static void UpdateInventoryLarge(int wheelState)
@@ -348,7 +343,12 @@ public static unsafe class ScrollHandlers
         if (!Services.Config.HandleFieldRecord)
             return;
 
-        if (RaptureAtkModule.Instance()->AtkCollisionManager.IntersectingCollisionNode == addon->DescriptionCollisionNode)
+        // 台服加固：RaptureAtkModule.Instance() 走 UIModule.Instance()，會回 null。
+        var atkModule = RaptureAtkModule.Instance();
+        if (atkModule == null)
+            return;
+
+        if (atkModule->AtkCollisionManager.IntersectingCollisionNode == addon->DescriptionCollisionNode)
             return;
 
         var atkEvent = new AtkEvent();
@@ -411,27 +411,48 @@ public static unsafe class ScrollHandlers
         if (!Services.Config.HandleMJIMinionNoteBook)
             return;
 
+        // 台服加固：[Agent(...)] 產生的 Instance() 有兩層合法回 null。
         var agent = AgentMJIMinionNoteBook.Instance();
+        if (agent == null)
+            return;
+
+        // 🔴 台服未驗證（R3）：0x407 / 0x40B 是寫死的 addon 命令碼。命令碼在台服對不對，
+        //    離線證明不了；若台服的分派表不同，送出去的會是「別的指令」而不是報錯。
+        //    ⇒ 只有「我的最愛↔一般」這條跨清單切換受此旗標控制，預設關；
+        //    同一個視窗內的一般分頁切換（不需要命令碼）照常運作。
+        var allowFavoritesSwitch = Services.Config.AllowUnverifiedMJIFavoritesSwitch;
 
         if (agent->CurrentView == AgentMJIMinionNoteBook.ViewType.Normal)
         {
             if (addon->TabController.TabIndex == 0 && wheelState < 0)
             {
+                if (!allowFavoritesSwitch)
+                    return;
+
                 agent->CurrentView = AgentMJIMinionNoteBook.ViewType.Favorites;
                 agent->SelectedFavoriteMinion.TabIndex = 0;
                 agent->SelectedFavoriteMinion.SlotIndex = agent->SelectedNormalMinion.SlotIndex;
                 agent->SelectedFavoriteMinion.MinionId = agent->GetSelectedMinionId();
                 agent->SelectedMinion = &agent->SelectedFavoriteMinion;
+                Services.PluginLog.Information("[ScrollableTabs] 送出未驗證的 addon 命令碼 0x407（無人島寵物：切到我的最愛）");
                 agent->HandleCommand(0x407);
             }
             else
             {
                 UpdateTabController((AtkUnitBase*)addon, &addon->TabController, true, wheelState);
+
+                if (!allowFavoritesSwitch)
+                    return;
+
+                Services.PluginLog.Information("[ScrollableTabs] 送出未驗證的 addon 命令碼 0x40B（無人島寵物：更新清單）");
                 agent->HandleCommand(0x40B);
             }
         }
         else if (agent->CurrentView == AgentMJIMinionNoteBook.ViewType.Favorites && wheelState > 0)
         {
+            if (!allowFavoritesSwitch)
+                return;
+
             agent->CurrentView = AgentMJIMinionNoteBook.ViewType.Normal;
             agent->SelectedNormalMinion.TabIndex = 0;
             agent->SelectedNormalMinion.SlotIndex = agent->SelectedFavoriteMinion.SlotIndex;
@@ -440,6 +461,7 @@ public static unsafe class ScrollHandlers
 
             addon->TabController.TabIndex = 0;
             addon->TabController.CallbackFunction(0, (AtkUnitBase*)addon);
+            Services.PluginLog.Information("[ScrollableTabs] 送出未驗證的 addon 命令碼 0x40B（無人島寵物：切回一般）");
             agent->HandleCommand(0x40B);
         }
     }
@@ -449,8 +471,26 @@ public static unsafe class ScrollHandlers
         if (!Services.Config.HandleCurrency)
             return;
 
+        // 🔴 台服加固（部署閘門 R1）：AtkStage.Instance() 是
+        //    [StaticAddress("...", 3, isPointer: true)]，也就是「讀一個指標」而不是 lea 一個位址，
+        //    所以它**可以**回 null（我方 CS fork 的台服加固 commit 讓 isPointer:true 的 Instance()
+        //    一律先判空）。上游這裡直接 atkStage->GetNumberArrayData(...) 沒有判空。
+        //    解參考 null 的後果是 AccessViolationException，那是 .NET Core 的 corrupted-state
+        //    exception，try/catch 與任何例外隔離都攔不到 ⇒ 直接把遊戲弄崩。
+        //    改成假設不成立也只是「這個視窗不捲」。
         var atkStage = AtkStage.Instance();
+        if (atkStage == null)
+            return;
+
         var numberArray = atkStage->GetNumberArrayData(NumberArrayType.Currency);
+        if (numberArray == null)
+            return;
+
+        var numberArrays = atkStage->GetNumberArrayData();
+        var stringArrays = atkStage->GetStringArrayData();
+        if (numberArrays == null || stringArrays == null)
+            return;
+
         var currentTab = numberArray->IntArray[0];
         var newTab = currentTab;
 
@@ -485,7 +525,7 @@ public static unsafe class ScrollHandlers
             return;
 
         numberArray->SetValue(0, newTab);
-        addon->OnRequestedUpdate(atkStage->GetNumberArrayData(), atkStage->GetStringArrayData());
+        addon->OnRequestedUpdate(numberArrays, stringArrays);
     }
 
     public static void UpdateInventoryBuddy(int wheelState)
@@ -565,24 +605,13 @@ public static unsafe class ScrollHandlers
         if (TryGetAddon<AtkUnitBase>("MiragePrismPrismBoxFilter"u8, out var filterAddon) && filterAddon->IsVisible)
             return;
 
+        // 台服加固：[Agent(...)] 產生的 Instance() 有兩層合法回 null。
         var agent = AgentMiragePrismPrismBox.Instance();
-        agent->PageIndex += (byte)wheelState;
-        agent->UpdateItems(false, false);
-    }
-
-    public static void UpdateGlassSelect(AddonGlassSelect* addon, int wheelState)
-    {
-        if (!Services.Config.HandleGlassSelect)
+        if (agent == null)
             return;
 
-        UpdateTabController((AtkUnitBase*)addon, &addon->TabController, true, wheelState);
-
-        for (var i = 0; i < addon->TabController.TabCount; i++)
-        {
-            var button = addon->Tabs.GetPointer(i);
-            if (button->Value != null)
-                button->Value->IsSelected = i == addon->TabController.TabIndex;
-        }
+        agent->PageIndex += (byte)wheelState;
+        agent->UpdateItems(false, false);
     }
 
     public static void UpdateCharacter(int wheelState)
@@ -596,7 +625,12 @@ public static unsafe class ScrollHandlers
         if (!addon->AddonControl.IsChildSetupComplete)
             return;
 
-        if (RaptureAtkModule.Instance()->AtkCollisionManager.IntersectingCollisionNode == addon->PreviewController.CollisionNode)
+        // 台服加固：同上，RaptureAtkModule.Instance() 會回 null。
+        var atkModule = RaptureAtkModule.Instance();
+        if (atkModule == null)
+            return;
+
+        if (atkModule->AtkCollisionManager.IntersectingCollisionNode == addon->PreviewController.CollisionNode)
             return;
 
         var tabIndex = GetTabIndex(addon->TabIndex, addon->TabCount, wheelState);
@@ -656,7 +690,7 @@ public static unsafe class ScrollHandlers
         var atkEvent = new AtkEvent();
         var data = new AtkEventData();
         data.ListItemData.SelectedIndex = tabIndex;
-        addon->AtkUnitBase.ReceiveEvent(AtkEventType.ListItemHighlight, 0, &atkEvent, &data);
+        addon->AtkUnitBase.ReceiveEvent(ListItemHighlight, 0, &atkEvent, &data);
 
         addon->ExpansionsDropDownList->SelectItem(tabIndex);
     }
@@ -680,9 +714,19 @@ public static unsafe class ScrollHandlers
         return Math.Clamp(currentTabIndex + wheelState, 0, numTabs - 1);
     }
 
+    // 🔴 台服加固：RaptureAtkUnitManager.Instance() 內部是
+    //    UIModule.Instance() -> RaptureAtkModule -> &...RaptureAtkUnitManager，
+    //    前兩層都會回 null（登入前／模組尚未就緒）。上游直接 ->GetAddonByName 解參考。
+    //    這條路徑每次滾輪都會走到，判空的成本可以忽略，不判的代價是 AVE（攔不到）。
     private static bool TryGetAddon<T>(ReadOnlySpan<byte> name, out T* addon) where T : unmanaged
     {
-        var unitbase = RaptureAtkUnitManager.Instance()->GetAddonByName(name);
+        addon = null;
+
+        var unitManager = RaptureAtkUnitManager.Instance();
+        if (unitManager == null)
+            return false;
+
+        var unitbase = unitManager->GetAddonByName(name);
         addon = (T*)unitbase;
         return unitbase != null && unitbase->IsReady;
     }
