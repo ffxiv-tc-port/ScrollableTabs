@@ -319,8 +319,18 @@ public static unsafe class ScrollHandlers
 
         addon->SetTab(tabIndex);
 
+        // 台服加固：_tabs 是 FixedSizeArray5<Pointer<AtkComponentRadioButton>>，這個迴圈跑的是
+        //    陣列容量（固定 5）而不是 addon->TabCount，未使用的槽位本來就可能是 null，上游直接解參考。
+        //    解參考 null 的後果是 AccessViolationException——.NET Core 的 corrupted-state exception，
+        //    try/catch 與任何例外隔離都攔不到 ⇒ 直接把遊戲弄崩。
+        //    IsSelected 的 setter 走原生的 AtkComponentButton.SetChecked，不像 IsEnabled 會在受控端
+        //    解 OwnerNode，所以判 .Value 就夠——與同檔 UpdateBuddy／UpdateCharacter 的既有寫法一致。
+        //    判空刻意放在迴圈內、只跳過該元素；改成 return 會連後面合法的分頁都不再設定＝回退既有行為。
         for (var i = 0; i < addon->Tabs.Length; i++)
-            addon->Tabs[i].Value->IsSelected = i == tabIndex;
+        {
+            if (addon->Tabs[i].Value != null)
+                addon->Tabs[i].Value->IsSelected = i == tabIndex;
+        }
     }
 
     public static void UpdateFateProgress(AddonFateProgress* addon, int wheelState)
