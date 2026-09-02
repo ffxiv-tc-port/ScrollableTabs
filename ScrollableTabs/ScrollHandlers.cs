@@ -495,8 +495,14 @@ public static unsafe class ScrollHandlers
         var newTab = currentTab;
 
         var enableStates = new bool[addon->Tabs.Length];
+        // 台服加固：AtkComponentButton.IsEnabled 解的是 OwnerNode（0xA8）而不是 AtkResNode（0xA0），
+        //    所以只判 Value != null 並不夠 —— OwnerNode 為 null 時照樣解參考 null。
+        //    AccessViolationException 是 .NET Core 的 corrupted-state exception，try/catch 攔不到
+        //    ⇒ 直接把遊戲弄崩。假設不成立時只是把該分頁當成停用（不捲到它）。
         for (var i = 0; i < addon->Tabs.Length; i++)
-            enableStates[i] = addon->Tabs[i].Value != null && addon->Tabs[i].Value->IsEnabled;
+            enableStates[i] = addon->Tabs[i].Value != null &&
+                              addon->Tabs[i].Value->OwnerNode != null &&
+                              addon->Tabs[i].Value->IsEnabled;
 
         if (wheelState > 0 && currentTab < enableStates.Length)
         {
@@ -594,12 +600,16 @@ public static unsafe class ScrollHandlers
         var prevButton = Services.Config.Invert ? addon->PrevButton : addon->NextButton;
         var nextButton = Services.Config.Invert ? addon->NextButton : addon->PrevButton;
 
+        // 台服加固：AtkComponentButton.IsEnabled 解的是 OwnerNode（0xA8）而不是 AtkResNode（0xA0）。
+        //    上面對 JobDropdown／OrderDropdown 的 List->OwnerNode 判得很仔細，這兩處原本卻漏了。
+        //    OwnerNode 為 null 時解參考 null ⇒ AccessViolationException（corrupted-state，try/catch 攔不到）。
+        //    判空刻意放在 isPrev／isNext 分支內，維持「不需要讀 IsEnabled 時就不讀」的既有行為。
         var isPrev = wheelState == (Services.Config.Invert ? -1 : 1);
-        if (prevButton == null || (isPrev && !prevButton->IsEnabled))
+        if (prevButton == null || (isPrev && (prevButton->OwnerNode == null || !prevButton->IsEnabled)))
             return;
 
         var isNext = wheelState == (Services.Config.Invert ? 1 : -1);
-        if (nextButton == null || (isNext && !nextButton->IsEnabled))
+        if (nextButton == null || (isNext && (nextButton->OwnerNode == null || !nextButton->IsEnabled)))
             return;
 
         if (TryGetAddon<AtkUnitBase>("MiragePrismPrismBoxFilter"u8, out var filterAddon) && filterAddon->IsVisible)
