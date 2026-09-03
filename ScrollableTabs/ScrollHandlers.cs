@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
@@ -412,7 +413,7 @@ public static unsafe class ScrollHandlers
         }
         else if (addon->CurrentView == AddonMinionMountBase.ViewType.Favorites && wheelState > 0)
         {
-            addon->TabController.CallbackFunction(0, (AtkUnitBase*)addon);
+            InvokeTabCallback(&addon->TabController, 0, (AtkUnitBase*)addon, "UpdateMountMinion");
         }
     }
 
@@ -470,7 +471,7 @@ public static unsafe class ScrollHandlers
             agent->SelectedMinion = &agent->SelectedNormalMinion;
 
             addon->TabController.TabIndex = 0;
-            addon->TabController.CallbackFunction(0, (AtkUnitBase*)addon);
+            InvokeTabCallback(&addon->TabController, 0, (AtkUnitBase*)addon, "UpdateMJIMinionNoteBook");
             Services.PluginLog.Information("[ScrollableTabs] 送出未驗證的 addon 命令碼 0x40B（無人島寵物：切回一般）");
             agent->HandleCommand(0x40B);
         }
@@ -726,7 +727,48 @@ public static unsafe class ScrollHandlers
             return;
 
         tabController->TabIndex = tabIndex;
-        tabController->CallbackFunction(tabIndex, addon);
+        InvokeTabCallback(tabController, tabIndex, addon, "UpdateTabController");
+    }
+
+    // 台服加固：TabController.CallbackFunction 是原生函式指標
+    //（delegate* unmanaged<int, AtkUnitBase*, void>，FieldOffset 0x90）。
+    // 呼叫 null 函式指標產生的 AccessViolationException 在 .NET Core 屬 corrupted-state exception，
+    // try/catch 與任何 SafeWrapper 都攔不到 ＝ 直接把使用者的遊戲帶走。
+    //
+    // 上游的隱含假設是「hover 中且 IsReady 的 addon，其 CallbackFunction 必已由 RegisterCallback 註冊」。
+    // 這個假設離線證明不了，但不需要證明它就能決定要不要判空 ——
+    // 台服 7.20 客戶端自己的 TabController::SetTabIndexAndCallBack（VA 0x141042B40）就是這樣寫的：
+    //     mov rax, [rbx+0x90] / test rax, rax / je 跳過 / mov rdx, [rbx+0x98] / mov ecx, edi / call rax
+    // 由此離線確認兩件事：①欄位確實在 0x90，台服布局與 FFXIVClientStructs 的宣告一致；
+    // ②遊戲本體把 null 當成合法狀態，處置是「照樣更新 TabIndex，只跳過回呼」。
+    // 所以這裡只包住 call 本身、不動周圍任何寫入 —— 語意與遊戲原生完全相同。
+    // 假設成立時這段是死碼、零行為改變；不成立時原本就是崩潰 ⇒ 純加固。
+    private static void InvokeTabCallback(TabController* tabController, int tabIndex, AtkUnitBase* addon, string site)
+    {
+        // 讀進區域變數再用，避免判空與呼叫之間對同一個欄位重複解參考。
+        delegate* unmanaged<int, AtkUnitBase*, void> callback = tabController->CallbackFunction;
+        if (callback == null)
+        {
+            ReportNullTabCallback(site, addon);
+            return;
+        }
+
+        callback(tabIndex, addon);
+    }
+
+    // 已回報過的「呼叫點＋addon」組合。UpdateTabController 是滾輪每一格都會走到的熱路徑，
+    // 不節流會洗版；但也不能全域只印一次，否則分不出是哪個 addon 出事。
+    private static readonly HashSet<string> ReportedNullTabCallbacks = new();
+
+    private static void ReportNullTabCallback(string site, AtkUnitBase* addon)
+    {
+        var addonName = addon != null ? addon->NameString : "<null>";
+
+        // 要使用者回報得出來就必須是 Information：使用者跑 LogLevel 2，Debug/Verbose 收不到。
+        if (ReportedNullTabCallbacks.Add(site + "|" + addonName))
+        {
+            Services.PluginLog.Information($"[ScrollableTabs] TabController.CallbackFunction 為 null，已跳過分頁回呼（呼叫點：{site}，addon：{addonName}）。遊戲本體在同樣情況下也會跳過，所以這不是崩潰，只是這一次滾輪切換不會生效。此組合只回報一次。");
+        }
     }
 
     private static int GetTabIndex(int currentTabIndex, int numTabs, int wheelState)
