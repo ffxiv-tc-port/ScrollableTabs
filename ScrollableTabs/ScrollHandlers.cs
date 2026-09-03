@@ -764,7 +764,7 @@ public static unsafe class ScrollHandlers
     {
         var addonName = addon != null ? addon->NameString : "<null>";
 
-        // 要使用者回報得出來就必須是 Information：使用者跑 LogLevel 2，Debug/Verbose 收不到。
+        // 要使用者回報得出來就必須是 Information：使用者跑 LogLevel 1，盲區只有 Verbose,Debug 收得到但單檔數十萬行會淹沒。
         if (ReportedNullTabCallbacks.Add(site + "|" + addonName))
         {
             Services.PluginLog.Information($"[ScrollableTabs] TabController.CallbackFunction 為 null，已跳過分頁回呼（呼叫點：{site}，addon：{addonName}）。遊戲本體在同樣情況下也會跳過，所以這不是崩潰，只是這一次滾輪切換不會生效。此組合只回報一次。");
