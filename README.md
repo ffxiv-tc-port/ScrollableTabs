@@ -1,6 +1,6 @@
 <img align="left" src="ScrollableTabs/Assets/Icon.png" width="60px" height="60px" alt="Scrollable Tabs"/>
 
-**滾輪切換分頁（Scrollable Tabs）** 是一個輕量外掛，讓你用滑鼠滾輪切換視窗分頁。<br/>
+**滾輪切換分頁（Scrollable Tabs）** 是一個輕量插件，讓你用滑鼠滾輪切換視窗分頁。<br/>
 <br/>
 <hr>
 
@@ -33,7 +33,7 @@
 - F.A.T.E.完成度
 - 探索筆記
 
-外掛設定可從外掛安裝器開啟。
+插件設定可從插件安裝器開啟。
 
 ## 與上游的差異
 
