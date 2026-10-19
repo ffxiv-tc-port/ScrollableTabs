@@ -1,0 +1,15 @@
+{
+  "Author": "Haselnussbomber",
+  "Name": "滾輪切換分頁",
+  "Punchline": "用滑鼠滾輪切換視窗分頁（就像手把的 LB／RB）。",
+  "Description": "用滑鼠滾輪切換視窗分頁（就像手把的 LB／RB）。\n\n支援下列視窗，可各自單獨開關：\n\n- 風脈泉\n- 兵裝庫\n- 青魔法書\n- 人物\n- 人物 → 職業＆特職\n- 人物 → 評價\n- 陸行鳥鞍囊\n- 搭檔\n- 貨幣一覽\n- 時尚配件\n- 戰果記錄\n- 魚類圖鑑\n- 投影台（捲動的是頁面，不是分頁）\n- 金碟遊樂園 → 幻卡列表\n- 金碟遊樂園 → 卡組一覽 → 編輯卡組\n- 金碟遊樂園 → 萌寵之王 → 寵物快速鍵\n- 物品欄\n- 無人島寵物一覽\n- 寵物一覽\n- 坐騎一覽\n- 僱員物品欄\n- F.A.T.E.完成度\n- 探索筆記\n\n台服移植版與上游的差異：\n- 已整段移除上游用來抑制指令面板音效的記憶體修補功能（台服特徵碼本來就掃不到）。\n- 「臉部配件」視窗不支援：我方釘住的 FFXIVClientStructs 沒有對應結構，刻意不從新版客戶端抄偏移。\n- 捲到物品欄最後一個分頁不會跳到「關鍵物品」視窗（依賴未在台服驗證的命令碼）。\n- 無人島寵物一覽的「我的最愛」互切預設關閉，可在設定中自行開啟。",
+  "RepoUrl": "https://github.com/ffxiv-tc-port/ScrollableTabs",
+  "IconUrl": "https://raw.githubusercontent.com/ffxiv-tc-port/ScrollableTabs/tc-7.20/ScrollableTabs/Assets/Icon.png",
+  "Tags": [
+    "Tabs",
+    "Scroll",
+    "MouseWheel",
+    "UI",
+    "QoL"
+  ]
+}

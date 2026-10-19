@@ -71,7 +71,15 @@ public partial class PluginConfig
     public int Version { get; set; } = CURRENT_CONFIG_VERSION;
 
     public bool Invert = false;
-    public bool SuppressQuickPanelSounds = true;
+
+    // 台服移植：上游的 SuppressQuickPanelSounds 需要對遊戲程式碼做記憶體修補，整段功能已移除。
+
+    // 🔴 台服未驗證：這一項控制的是「寫死的 addon 命令碼」路徑（HandleCommand 0x407、0x40B）。
+    //    命令碼在台服對不對離線證明不了，猜錯的失敗形式是「送出別的指令」而不是報錯 ⇒ 預設關。
+    //    實機確認過之後可以自行打開，或改成預設開。
+    //    （上游另一條用命令碼 22 的「物品欄↔關鍵物品」互切已整條移除，見 ScrollHandlers。）
+    public bool AllowUnverifiedMJIFavoritesSwitch = false;
+
     public bool HandleAetherCurrent = true;
     public bool HandleArmouryBoard = true;
     public bool HandleAOZNotebook = true;
@@ -81,7 +89,9 @@ public partial class PluginConfig
     public bool HandleInventoryBuddy = true;
     public bool HandleBuddy = true;
     public bool HandleCurrency = true;
-    public bool HandleGlassSelect = true;
+
+    // 台服移植：HandleGlassSelect（臉部配件）已移除——我方 CS 沒有 AddonGlassSelect 結構。
+
     public bool HandleOrnamentNoteBook = true;
     public bool HandleFieldRecord = true;
     public bool HandleFishGuide = true;
