@@ -52,3 +52,4 @@ jobs:
 
 # 🔴 本 repo 只有 ScrollableTabs.slnx 沒有 .sln——`dotnet build X.sln` 會報 MSB1009
 #    看起來像 repo 壞了。一律直接建 .csproj（艦隊已有 Saucy / WrathCombo 兩個 slnx-only 先例）。
+# workflow re-registration trigger 2026-10-26T18:34:10Z
